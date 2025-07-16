@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: auditoria_postgres
+    environment:
+      POSTGRES_DB: auditoria_db
+      POSTGRES_USER: auditoria_user
+      POSTGRES_PASSWORD: auditoria_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - auditoria_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auditoria_user -d auditoria_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auditoria_backend
+    environment:
+      - DATABASE_URL=postgresql://auditoria_user:auditoria_password@postgres:5432/auditoria_db
+      - SECRET_KEY=tu-clave-secreta-super-segura-aqui-cambiar-en-produccion
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auditoria_network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'Esperando a que PostgreSQL esté listo...' &&
+        sleep 10 &&
+        echo 'Inicializando base de datos...' &&
+        python init_db.py &&
+        echo 'Aplicando migraciones...' &&
+        alembic upgrade head &&
+        echo 'Iniciando servidor FastAPI...' &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "

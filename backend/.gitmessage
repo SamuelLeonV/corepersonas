@@ -1,0 +1,17 @@
+# Tipo: Descripción breve
+
+# Tipos válidos:
+# feat: Nueva funcionalidad
+# fix: Corrección de bug
+# docs: Documentación
+# style: Formato, punto y coma faltante, etc
+# refactor: Refactorización de código
+# test: Agregar tests
+# chore: Tareas de mantenimiento
+
+# Descripción detallada (opcional):
+
+
+# Issues relacionados (opcional):
+# Closes #123
+# Fixes #456
